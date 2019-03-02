@@ -1,6 +1,7 @@
 # Signal_translator
 GRAMMAR:
 
+
   1. <signal-program> --> <program> 
   2. <program> --> PROGRAM <procedure-identifier>;<block>.
   3. <block> --> <declarations> BEGIN <statements-list> END 
