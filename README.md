@@ -1,4 +1,4 @@
-# Signal_translator
+# Signal translator
 GRAMMAR:
 
 
