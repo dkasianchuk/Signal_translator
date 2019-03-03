@@ -4,7 +4,7 @@
   column)
 
 (defmethod print-object ((lex lexem) stream)
-  (format stream "~A" (lexem-value lex)))
+  (format stream "~S" (lexem-value lex)))
 
 (defun create-lexem (value row column)
   (make-lexem :value value
@@ -12,7 +12,7 @@
 	      :column column))
 
 (defun is-keyword (word)
-  (find word '("PROGRAM" "BEGIN" "END" "CONST") :test #'string=))
+  (find word '(PROGRAM BEGIN END CONST)))
 
 (defun is-delimeter (dm)
   (cond
@@ -22,7 +22,7 @@
     ((eq dm #\-) 'negative)))
 
 (defun is-whitespace (symb)
-  (and symb (find symb '(#\Return #\Space #\Tab #\Newline #\Vt) :test #'eq)))
+  (and symb (find symb '(#\Return #\Space #\Tab #\Newline #\Vt))))
 
 (defun scanner (&optional (filename "test.txt"))
   (with-open-file (stream filename)
@@ -53,7 +53,10 @@
 	   (list next-symb nil (car row-col) (second row-col)))))
     ((is-delimeter input)
      (list (read-char stream nil)
-	   (is-delimeter input)
+	   (list 'delimeter
+		 (create-lexem (is-delimeter input)
+			       row
+			       column))
 	   row
 	   (1+ column)))
     ((digit-char-p input)
@@ -62,7 +65,10 @@
 	  ((not (digit-char-p next-symb))
 	   (list next-symb
 		 (list 'unsigned-integer
-		       (create-lexem (coerce (reverse (cdr buff)) 'string)
+		       (create-lexem (reduce (lambda(acc elem)
+					       (+ (* acc 10)(digit-char-p elem)))
+					     (reverse (cdr buff))
+					     :initial-value 0)
 				     row
 				     column))
 		 row
@@ -72,20 +78,26 @@
 	   (buff (list next-symb input) (cons next-symb buff)))
 	  ((not (alphanumericp next-symb))
 	   (list next-symb
-		 (let ((name (coerce (mapcar #'char-upcase (reverse (cdr buff))) 'string)))
-		   (list (if (is-keyword name)
+		 (let ((value (intern (coerce
+				       (mapcar #'char-upcase (reverse (cdr buff)))
+				       'string))))
+		   (list (if (is-keyword value)
 			     'keyword
 			     'identifier)
-			 (create-lexem name row column)))
+			 (create-lexem value row column)))
 		 row
 		 (+ column (1- (length buff)))))))
     ((eq input #\:)
-     (if (eq (read-char stream nil) #\=)
-	 (list (read-char stream nil)
-	       'eq-variable
-	       row
-	       (+ column 2))
-	 (error "Error symbol after ':' in: ~S row ~S column" row column)))
+     (let ((symbol (read-char stream nil)))
+       (if (eq symbol #\=)
+	   (list (read-char stream nil)
+		 (list 'delimeter
+		       (create-lexem 'eq-variable
+				     row
+				     column))
+		 row
+		 (+ column 2))
+	   (format t "ERROR(line ~S,column ~S): Expected '=' after ':', but '~A' found" row column (string symbol)))))
     ((eq input #\( )
      (if (eq (read-char stream nil) #\*)
 	 (do* ((next-symb (read-char stream nil) (read-char stream nil))
@@ -106,17 +118,17 @@
 				(setf (second row-col) (+ (+ (second row-col) count) 2))
 				t)
 			       ((null last-char)
-				(error "Error end of file in: ~S row ~S column" (car row-col)
+				(format t "ERROR(line ~S,column ~S): Error end of file." (car row-col)
 				       (second row-col)))
 			       (t (and (setf (second row-col) (1+ (+ (second row-col) count)))
 				       nil))))))
-		   (error "Error end of file in: ~S row ~S column" (car row-col)
-			  (second row-col)))
+		   (format t "ERROR(line ~S,column ~S): Error end of file." (car row-col)
+			   (second row-col)))
 	       (list (read-char stream nil)
 		     nil
 		     (car row-col)
 		     (second row-col))))
-	 (error "Not asterix after '(' in: ~S row ~S column" row column)))
+	 (format t "ERROR(line ~S,column ~S): '*' expected after '('." row column)))
     ((null input) nil)
-    (t (error "Error symbol in: ~S row ~S column" row column))))
+    (t (format t "ERROR(line ~S,column ~S): Illegal symbol '~A'" row column (string input)))))
 
