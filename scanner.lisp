@@ -3,8 +3,8 @@
   row
   column)
 
-(defmethod print-object ((lex lexem) stream)
-  (format stream "~S" (lexem-value lex)))
+(defmethod print-object((token lexem) stream)
+  (format stream "~S" (lexem-value token)))
 
 (defun create-lexem (value row column)
   (make-lexem :value value
@@ -19,7 +19,7 @@
     ((eq dm #\;) 'semicolon)
     ((eq dm #\.) 'dot)
     ((eq dm #\=) 'eq-constant)
-    ((eq dm #\-) 'negative)))
+    ((eq dm #\-) 'minus)))
 
 (defun is-whitespace (symb)
   (and symb (find symb '(#\Return #\Space #\Tab #\Newline #\Vt))))
@@ -31,8 +31,7 @@
 			       (first read-value)
 			       (third read-value)
 			       (fourth read-value)))
-	  (rezult nil
-		  (cons (second read-value) rezult)))
+	  (rezult nil (cons (second read-value) rezult)))
 	 ((not (car read-value))
 	  (reverse (remove nil rezult))))))
 
@@ -78,9 +77,8 @@
 	   (buff (list next-symb input) (cons next-symb buff)))
 	  ((not (alphanumericp next-symb))
 	   (list next-symb
-		 (let ((value (intern (coerce
-				       (mapcar #'char-upcase (reverse (cdr buff)))
-				       'string))))
+		 (let ((value (intern (coerce (reverse (cdr buff))
+					      'string))))
 		   (list (if (is-keyword value)
 			     'keyword
 			     'identifier)
@@ -97,7 +95,8 @@
 				     column))
 		 row
 		 (+ column 2))
-	   (format t "ERROR(line ~S,column ~S): Expected '=' after ':', but '~A' found" row column (string symbol)))))
+	   (format t "ERROR(line ~S,column ~S): Expected '=' after ':', but '~A' found~%"
+		   row column (string symbol)))))
     ((eq input #\( )
      (if (eq (read-char stream nil) #\*)
 	 (do* ((next-symb (read-char stream nil) (read-char stream nil))
@@ -118,17 +117,22 @@
 				(setf (second row-col) (+ (+ (second row-col) count) 2))
 				t)
 			       ((null last-char)
-				(format t "ERROR(line ~S,column ~S): Error end of file." (car row-col)
-				       (second row-col)))
+				(or (format t "ERROR(line ~S,column ~S): Error end of file.~%"
+					    (car row-col)
+					    (second row-col))
+				    t))
 			       (t (and (setf (second row-col) (1+ (+ (second row-col) count)))
 				       nil))))))
-		   (format t "ERROR(line ~S,column ~S): Error end of file." (car row-col)
-			   (second row-col)))
+		   (or (format t "ERROR(line ~S,column ~S): Error end of file.~%"
+			       (car row-col)
+			       (second row-col))
+		       t))
 	       (list (read-char stream nil)
 		     nil
 		     (car row-col)
 		     (second row-col))))
-	 (format t "ERROR(line ~S,column ~S): '*' expected after '('." row column)))
+	 (format t "ERROR(line ~S,column ~S): '*' expected after '('.~%"
+		 row column)))
     ((null input) nil)
-    (t (format t "ERROR(line ~S,column ~S): Illegal symbol '~A'" row column (string input)))))
-
+    (t (format t "ERROR(line ~S,column ~S): Illegal symbol '~A'~%"
+	       row column (string input)))))
