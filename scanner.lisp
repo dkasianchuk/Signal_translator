@@ -95,7 +95,7 @@
 				     column))
 		 row
 		 (+ column 2))
-	   (format t "ERROR(line ~S,column ~S): Expected '=' after ':', but '~A' found~%"
+	   (warn "ERROR(line ~S,column ~S): Expected '=' after ':', but '~A' found~%"
 		   row column (string symbol)))))
     ((eq input #\( )
      (if (eq (read-char stream nil) #\*)
@@ -117,13 +117,13 @@
 				(setf (second row-col) (+ (+ (second row-col) count) 2))
 				t)
 			       ((null last-char)
-				(or (format t "ERROR(line ~S,column ~S): Error end of file.~%"
+				(or (warn "ERROR(line ~S,column ~S): Error end of file.~%"
 					    (car row-col)
 					    (second row-col))
 				    t))
 			       (t (and (setf (second row-col) (1+ (+ (second row-col) count)))
 				       nil))))))
-		   (or (format t "ERROR(line ~S,column ~S): Error end of file.~%"
+		   (or (warn "ERROR(line ~S,column ~S): Error end of file.~%"
 			       (car row-col)
 			       (second row-col))
 		       t))
@@ -131,8 +131,8 @@
 		     nil
 		     (car row-col)
 		     (second row-col))))
-	 (format t "ERROR(line ~S,column ~S): '*' expected after '('.~%"
+	 (warn "ERROR(line ~S,column ~S): '*' expected after '('.~%"
 		 row column)))
     ((null input) nil)
-    (t (format t "ERROR(line ~S,column ~S): Illegal symbol '~A'~%"
+    (t (warn "ERROR(line ~S,column ~S): Illegal symbol '~A'~%"
 	       row column (string input)))))
