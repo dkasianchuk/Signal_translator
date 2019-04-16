@@ -1,5 +1,37 @@
 (load "scanner.lisp")
 
+(defvar *index* 0)
+
+(defun inc () (incf *index*))
+
+(defun tree-to-graph (source-file &optional (target-file "graph.dot"))
+  (let ((graph (cl-graph:make-graph 'cl-graph:dot-graph
+				    :default-edge-type :directed)))
+    (make-pairs (parse-file source-file)
+	        (lambda (pair)
+		  (let ((vertex1 (cl-graph:add-vertex graph
+						      (car (car pair))
+						      :dot-attributes (list :label (second (car pair)))))
+			(vertex2 (cl-graph:add-vertex graph
+						      (car (second pair))
+						      :dot-attributes (list :label (second (second pair))))))
+		    (cl-graph:add-edge-between-vertexes graph
+							vertex1
+							vertex2
+							:dot-attributes '(:label "")))))
+    (cl-graph:graph->dot graph target-file)))
+
+(defun make-pairs (lst fn)
+  (let ((index *index*))
+    (mapc (lambda (elem)
+	    (inc)
+	    (funcall fn (if (listp elem)
+			    (prog1
+				(list (list index (car lst)) (list *index* (car elem)))
+			      (make-pairs elem fn))
+			    (list (list index (car lst)) (list *index* elem)))))
+	  (cdr lst))))
+
 (defun parse-file (filename)
   (parser (scanner filename)))
 
@@ -22,7 +54,7 @@
 (defun <signal-program> ()
   (let ((program (<program>)))
     (if (and program (null *lexem-row*))
-	(list 'signal-programm program)
+	(list 'signal-program program)
 	(warn "ERROR: Expected end of file."))))
 
 (defun <program> ()
@@ -36,11 +68,11 @@
 			  (list 'program 'PROGRAM procedure-identifier block_ 'dot)
 			  (warn "ERROR: dot expected"))
 		      (warn "ERROR: <BLOCK> error.")))
-		(warn "ERROR: Semicolon expected."))
+		(warn "ERROR: ; expected."))
 	    (warn "ERROR: <PROCEDURE-IDENTIFIER> ERROR.")))
       (warn "ERROR: Keyword 'PROGRAM' expected.")))
 
-(defun <block>()
+(defun <block> ()
   (let ((declarations (<declarations>)))
     (if declarations
 	(if (is-correct-lexem (scan) 'keyword 'BEGIN)
@@ -53,24 +85,24 @@
 	    (warn "ERROR: Expected keyword 'BEGIN'."))
 	(warn "ERROR: <DECLARATIONS> error."))))
 
-(defun <declarations>()
+(defun <declarations> ()
   (let ((constant-declarations (<constant-declarations>)))
     (if constant-declarations
 	(list 'declarations constant-declarations)
 	(warn "ERROR: <CONSTANT-DECLARATIONS> error."))))
 
-(defun <constant-declarations>()
+(defun <constant-declarations> ()
   (let ((ts (scan)))
     (if (is-correct-lexem ts 'keyword 'CONST)
 	(let ((constant-declaration-list (<constant-declaration-list>)))
 	  (if constant-declaration-list
-	      (list 'constant-declarations constant-declaration-list)
+	      (list 'constant-declarations 'CONST constant-declaration-list)
 	      (warn "ERROR: <CONSTANT-DECLARATION-LIST> error.")))
 	(prog2
 	    (unscan ts)
 	    (list 'constant-declarations)))))
 
-(defun <constant-declaration-list>()
+(defun <constant-declaration-list> ()
   (labels ((%constant-declaration-list ()
 	     (let ((ts (scan)))
 	       (if (is-correct-lexem ts 'keyword 'BEGIN)
@@ -81,7 +113,7 @@
 			 (warn "ERROR: <CONSTANT-DECLARATION> error.")))))))
     (cons 'constant-declaration-list (%constant-declaration-list))))
 
-(defun <statements-list>()
+(defun <statements-list> ()
   (labels ((%statement-list ()
 	     (let ((ts (scan)))
 	       (if (is-correct-lexem ts 'keyword 'END)
@@ -92,7 +124,7 @@
 			 (warn "ERROR: <STATEMENT> error.")))))))
     (cons 'statements-list (%statement-list))))
 
-(defun <constant-declaration>(ts)
+(defun <constant-declaration> (ts)
   (let ((constant-identifier (<constant-identifier> ts)))
     (if constant-identifier
 	(if (is-correct-lexem (scan) 'delimeter 'eq-constant)
@@ -105,7 +137,7 @@
 	    (warn "ERROR: ':=' expected"))
 	(warn "ERORR: <CONSTANT-IDENTIFIER> erorr."))))
 
-(defun <statement>(ts)
+(defun <statement> (ts)
   (let ((variable-identifier (<variable-identifier> ts)))
     (if variable-identifier
 	(if (is-correct-lexem (scan) 'delimeter 'eq-variable)
@@ -113,18 +145,18 @@
 	      (if constant
 		  (if (is-correct-lexem (scan) 'delimeter 'semicolon)
 		      (list 'statement variable-identifier 'eq-variable constant)
-		      (warn "ERROR: ; expexted."))
+		      (warn "ERROR: ; expected."))
 		  (warn "ERROR: <CONSTANT> erorr.")))
 	    (warn "ERROR: ':=' expected"))
 	(warn "ERORR: <VARIABLE-IDENTIFIER> erorr."))))
 
-(defun <constant>(ts)
+(defun <constant> (ts)
   (let ((unsigned-integer (<unsigned-integer> ts)))
     (if unsigned-integer
 	(list 'constant unsigned-integer)
 	(warn "ERROR: <UNSIGNED-INTEGER> expected."))))
 
-(defun <constant-identifier>(ts)
+(defun <constant-identifier> (ts)
   (let ((identifier (<identifier> ts)))
     (if identifier
 	(list 'constant-identifier identifier)
@@ -133,7 +165,7 @@
 (defun <variable-identifier>(ts)
   (let ((identifier (<identifier> ts)))
     (if identifier
-	(list 'varible-identifier identifier)
+	(list 'variable-identifier identifier)
 	(warn "ERROR: <IDENTIFIER> error."))))
 
 (defun <procedure-identifier>(ts)
