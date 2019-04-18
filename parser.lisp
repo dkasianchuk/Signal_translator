@@ -80,21 +80,27 @@
   (labels ((%constant-declaration-list ()
 	     (let ((ts (scan)))
 	       (if (is-correct-lexem ts 'keyword 'BEGIN)
-		   (unscan ts)
+		   (prog2
+		       (unscan ts)
+		       (list '<constant-declaration-list> '<empty>))
 		   (let ((constant-declaration (<constant-declaration> ts)))
 		     (when constant-declaration
-		       (cons constant-declaration (%constant-declaration-list))))))))
-    (cons '<constant-declaration-list> (%constant-declaration-list))))
+		       (cons '<constant-declaration-list>
+			     (list constant-declaration (%constant-declaration-list)))))))))
+    (%constant-declaration-list)))
 
 (defun <statements-list> ()
   (labels ((%statement-list ()
 	     (let ((ts (scan)))
 	       (if (is-correct-lexem ts 'keyword 'END)
-		   (unscan ts)
+		   (prog2
+		       (unscan ts)
+		       (list '<statement-list> '<empty>))
 		   (let ((statement (<statement> ts)))
 		     (when statement
-		       (cons statement (%statement-list))))))))
-    (cons '<statements-list> (%statement-list))))
+		       (cons '<statements-list>
+			     (list statement (%statement-list)))))))))
+    (%statement-list)))
 
 (defun <constant-declaration> (ts)
   (let ((constant-identifier (<constant-identifier> ts)))
