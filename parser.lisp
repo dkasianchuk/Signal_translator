@@ -74,7 +74,7 @@
 	    (list '<constant-declarations> 'CONST constant-declaration-list)))
 	(prog2
 	    (unscan ts)
-	    (list 'constant-declarations)))))
+	    (list '<constant-declarations>)))))
 
 (defun <constant-declaration-list> ()
   (labels ((%constant-declaration-list ()
@@ -82,7 +82,7 @@
 	       (if (is-correct-lexem ts 'keyword 'BEGIN)
 		   (prog2
 		       (unscan ts)
-		       (list '<constant-declaration-list> '<empty>))
+		       (list '<constant-declaration-list>))
 		   (let ((constant-declaration (<constant-declaration> ts)))
 		     (when constant-declaration
 		       (cons '<constant-declaration-list>
@@ -95,7 +95,7 @@
 	       (if (is-correct-lexem ts 'keyword 'END)
 		   (prog2
 		       (unscan ts)
-		       (list '<statement-list> '<empty>))
+		       (list '<statements-list>))
 		   (let ((statement (<statement> ts)))
 		     (when statement
 		       (cons '<statements-list>
@@ -137,9 +137,13 @@
 		  (lexem-column (second eq-variable))))))))
 
 (defun <constant> (ts)
-  (let ((unsigned-integer (<unsigned-integer> ts)))
-    (when unsigned-integer
-      (list '<constant> unsigned-integer))))
+  (if (is-correct-lexem ts 'delimeter 'minus)
+      (let ((unsigned-integer (<unsigned-integer> (scan))))
+	(when unsigned-integer
+	  (list '<constant> 'minus unsigned-integer)))
+      (let ((unsigned-integer (<unsigned-integer> ts)))
+	(when unsigned-integer
+	  (list '<constant> unsigned-integer)))))
 
 (defun <constant-identifier> (ts)
   (let ((identifier (<identifier> ts)))
@@ -157,22 +161,11 @@
       (list '<procedure-identifier> identifier))))
 
 (defun <unsigned-integer>(ts)
-  (if (is-correct-lexem ts 'delimeter 'minus)
-      (let ((lexem (scan)))
-	(if (eq (car lexem) 'unsigned-integer)
-	    (let ((unsigned-integer (second lexem)))
-	      (list '<unsigned-integer>
-		    (make-lexem :value (- (lexem-value unsigned-integer))
-				:row (lexem-row unsigned-integer)
-				:column (1- (lexem-column unsigned-integer)))))
-	    (warn "ERROR: <UNSIGNED-INTEGER> expected at line ~S, column ~S."
-		  (lexem-row (second lexem))
-		  (lexem-column (second lexem)))))
-      (if (eq (car ts) 'unsigned-integer)
-	  (list '<unsigned-integer> (second ts))
-	  (warn "ERROR: <UNSIGNED-INTEGER> expected at line ~S, column ~S."
-		(lexem-row (second ts))
-		(lexem-column (second ts))))))
+  (if (eq (car ts) 'unsigned-integer)
+      (list '<unsigned-integer> (second ts))
+      (warn "ERROR: <UNSIGNED-INTEGER> expected at line ~S, column ~S."
+	    (lexem-row (second ts))
+	    (lexem-column (second ts)))))
 
 (defun <identifier>(ts)
   (if (eq (car ts) 'identifier)
