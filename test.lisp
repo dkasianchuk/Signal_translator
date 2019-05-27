@@ -1,7 +1,15 @@
 (load "scanner.lisp")
-(ql:quickload :cl-graph)
+(load "parser.lisp")
+(load "generator.lisp")
+
 (defvar *index* 0)
-(defun inc () (incf *index*))
+
+(defun scanner-test (code-file &optional log-file)
+  (if log-file
+      (with-open-file (stream log-file :direction :output :if-exists :supersede)
+	(write-to-stream (scanner code-file) stream))
+      (write-to-stream (scanner code-file))))
+
 (defun tree-to-graph (source-file &optional (target-file "graph.dot"))
   (let ((graph (cl-graph:make-graph 'cl-graph:dot-graph
 				    :default-edge-type :directed)))
@@ -18,6 +26,16 @@
 							vertex2
 							:dot-attributes '(:label "")))))
     (cl-graph:graph->dot graph target-file)))
+
+(defun translate-to-file (source-file target-file)
+  (with-open-file (stream
+		   target-file
+		   :direction :output
+		   :if-exists :supersede
+		   :if-does-not-exist :create)
+    (translate source-file stream)))
+
+(defun inc () (incf *index*))
 
 (defun make-pairs (lst fn)
   (let ((index *index*))
@@ -39,12 +57,6 @@
 		(type (car lexem)))
 	    (format stream "~5S ~7S ~15S ~S~%" line column value type)))
 	rezult))
-
-(defun scanner-test (code-file &optional log-file)
-  (if log-file
-      (with-open-file (stream log-file :direction :output :if-exists :supersede)
-	(write-to-stream (scanner code-file) stream))
-      (write-to-stream (scanner code-file))))
 
 (defun run-tests-scanner ()
   (format t "TEST 1:~%")

@@ -2,8 +2,9 @@
 (defvar *constant-names*)
 
 (defun translate (filename &optional stream)
-  (let (*constant-names*)
-    (format stream "~A" (traverse (parse-file filename)))))
+  (let* (*constant-names*
+	 (asm-code (traverse (parse-file filename))))
+    (format stream "~A" asm-code)))
 
 (defun traverse (tree)
   (case (car tree)
@@ -16,7 +17,7 @@
     (<block>
      (format
       nil
-      "~A.code~%BEGIN:~%~A~TMOV AX,4c00h~%~TINT 21h~%~Tend BEGIN~%"
+      "~A.code~%BEGIN:~%~TMOV AX, @DATA~%~TMOV DS, AX~%~A~TMOV AX,4c00h~%~TINT 21h~%END BEGIN~%"
       (traverse (second tree))
       (traverse (fourth tree))))
     (<declarations>
